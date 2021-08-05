@@ -1,0 +1,238 @@
+<?php
+	session_start();
+	date_default_timezone_set('Etc/GMT-8'); // Set time zone to Philippine time
+    // 1. Check if the user has access to this page
+	if(!isset($_SESSION["User"])){
+		// 1.1. If he isn't logged in, redirect to the LogIn page
+		header("Location: ../LogIn.php");
+	}
+	else{
+		// 1.1. If he is logged in, but not the proper account type, redirect to an access restriction page
+		if($_SESSION["User"]["UserType"] != 1){
+			header("Location: ../InvalidAccess.html");
+		}
+
+		else{
+			if(!isset($_POST["ManageMenu"])){
+				header("Location: ManageMenu_action_page.php");
+			}
+		}
+	}
+?>
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>RCMS | Manage Menu</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+		<link rel="stylesheet" href="../css/myStyles.css">
+		<link rel="icon" href="../img/favicon.ico">
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+	</head>
+	<body>
+		<nav class="navbar navbar-default">
+			<div class="container-fluid">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>                        
+					</button>
+					<a class="navbar-brand" href="#" style = "font-size: 1.5em; font-weight: bold;">Restaurant Chain Management System</a>
+				</div>
+				<div class="collapse navbar-collapse" id="myNavbar">
+					<ul class="nav navbar-nav" style = "text-align: center;">
+						<li><a href="ChainInfo.php">Chain Info</a></li>
+						<li class = "active"><a href="ManageMenu.php">Manage Menu</a></li>
+						<li><a href="ManageBranches.php">Manage Branches</a></li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right" style = "text-align: center;">
+						<li class="dropdown">
+							<a class="dropdown-toggle" data-toggle="dropdown" href="#">
+								<?php 
+									echo $_SESSION["User"]["UserName"]; 
+								?> 
+								<span class="caret"></span>
+							</a>
+							<ul class="dropdown-menu" style = "text-align: center;">
+								<li><a href="MyProfile.php"><span class = "glyphicon glyphicon-user"></span> My Profile</a></li>
+								<li><a href="../SignOut.php"><span class = "glyphicon glyphicon-off"></span> Sign Out</a></li>
+							</ul>
+						<li>
+							<img 
+								<?php 
+									if(file_exists($_SESSION["User"]["UserImageLocation"])){ 
+										echo 'src = "'.$_SESSION["User"]["UserImageLocation"].'"';
+									}
+									else{ 
+										echo 'src = "https://via.placeholder.com/32"'; 
+									}
+								?>
+							class="img-circle user-avatar"></li>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</nav>
+		<div class="container">
+			<div class = "row">
+				<div class = "col-sm-12" style = "text-align: center; margin-bottom: 1em;">
+					<span style = "font-weight: bold; font-size: 1.5em;">
+						<?php
+							if(!file_exists("../Restaurant_Name.txt")){
+								echo 'Restaurant Chain';
+							}
+							else{
+								echo file_get_contents("../Restaurant_Name.txt");
+							}
+						?>
+					</span>
+				</div>
+			</div>
+			
+			<div id = "alert" class="alert 
+				<?php
+					if(isset($_POST["isSuccess"])){
+						echo ' alert-success';
+					}
+					else if(isset($_POST["isDanger"])){
+						echo ' alert-danger';
+					}
+				?>
+			fade in">
+				<?php
+					if(isset($_POST["alert"])){
+						echo $_POST["alert"];
+					}
+				?>
+			</div>
+			
+			<div class="panel panel-default">
+				<div class="panel-heading"><span style = "font-weight: bold; font-size: 1.25em;">Menu List</span></div>
+				<div class="panel-body">
+					<form action="ManageMenu_action_page.php" method = "post">
+						<div class = "table-responsive">
+							<table class="table table-hover">
+								<thead>
+									<tr>
+										<th>Item Name</th>
+										<th>Price</th>
+										<th>Image</th>
+										<th>Image Path</th>
+										<th>Edit</th>
+										<th>Delete</th>
+									</tr>
+								</thead>
+								<tbody>
+									<div id = "resultsDiv">
+									<?php
+										if(isset($_POST["Result"])){
+											echo $_POST["Result"];
+										}
+										else{
+											echo
+												'
+													<tr>
+														<td colspan = "6" style = "text-align: center"><i>No results to show.</i></td>
+													</tr>
+												
+												';
+										}
+									?>
+									</div>
+								</tbody>
+							</table>
+					</form>
+					</div>
+				</div>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading"><span style = "font-weight: bold; font-size: 1.25em;">Add Menu Item</span></div>
+				<div class="panel-body">
+					<form onsubmit = "return false" enctype="multipart/form-data" class = "form-horizontal" id = "form_add_item">
+						<div class = "form-group">
+							<div class = "col-sm-offset-5 col-sm-7"><img id = "output" src = "../img/food.png" class="img-responsive img-circle" style = "max-height: 200px; max-width: 200px;"></div>
+						</div>
+						<div class="form-group">
+							<label class="control-label col-sm-2" for="ItemName"><span style = "color: red;">*</span> Item Name:</label>
+							<div class="col-sm-10">
+								<input type="text" class="form-control" name = "ItemName" id="ItemName" placeholder="Enter item name">
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="control-label col-sm-2" for="ItemPrice"><span style = "color: red;">*</span> Price:</label>
+							<div class="col-sm-10">
+								<input type="number" step = "any" class="form-control" name = "ItemPrice" id="ItemPrice" placeholder="Enter price">
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="control-label col-sm-2" for="pwd">Image:</label>
+							<div class="col-sm-10">
+								<input class = "form-control" type="file" accept="image/*" name="image" id="image"  onchange="loadFile(event)">
+							</div>
+						</div>
+						<div class="form-group" style = "text-align: center;">
+							<button type="submit" id = "btn_add_item" class="btn btn-default btn-lg">Add Item</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</body>
+	<script>
+		var loadFile = function(event) {
+			var image = document.getElementById('output');
+			image.src = URL.createObjectURL(event.target.files[0]);
+		};
+		var loadFile2 = function(event,num) {
+			var image = document.getElementById('output' + num);
+			image.src = URL.createObjectURL(event.target.files[0]);
+		};
+		
+		$('#btn_add_item').click(function()
+		{
+			// Create New Form
+			var form = new FormData(document.getElementById('form_add_item'));
+			var file = document.getElementById('image').files[0];
+			if (file) {   
+				form.append('image', file);
+			}
+			console.log(form);
+			
+			$.ajax({
+				type: "POST",
+				url: "ManageMenu_action_page.php",
+				data: form,             
+				cache: false,
+				contentType: false,
+				processData: false,
+				success: function(data)
+				{
+					var obj = JSON.parse(data);
+					console.log(data);
+					
+					if(obj["isSuccess"] == false){
+						$("#alert").addClass("alert-danger");
+					}
+					else{
+						$("#alert").addClass("alert-success");
+						$("#resultsDiv").append(obj["newRow"]);
+					}
+					
+					$("#alert").html(obj["alert"]);
+					//console.log(obj["alert"]);
+				}
+			});
+			
+			//alert('names');
+
+
+		});
+		
+		function hideAlert(){
+			$("#alert").fadeOut();
+		}
+	</script>
+</html>
